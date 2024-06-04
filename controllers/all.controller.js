@@ -7,7 +7,7 @@ import cloudinary from "cloudinary";
 export const register = async (req, res) => {
   try {
     const { credentials } = req.body;
-    // console.log(credentials);
+    console.log(credentials);
 
     // CREATE A NEW USER AND SAVE TO DB
     let newUser = await User.create(credentials);
@@ -170,7 +170,7 @@ export const editCollection = async (req, res) => {
     }
 
     const updateColl = await Collection.updateOne(
-      { _id: req.body?.userId },
+      { _id: req.body?.collId },
       { $set: updateData }
     );
 
@@ -188,7 +188,12 @@ export const deleteCollection = async (req, res) => {
     await cloudinary.uploader.destroy(req.body?.imgId);
 
     const collection = await Collection.findByIdAndDelete(req.body?.deleteId);
-    console.log(collection);
+    // console.log(collection);
+
+    const items = await Item.deleteMany({
+      _id: { $in: collection?.items },
+    });
+    // console.log(items);
 
     return res.json("success");
   } catch (err) {
@@ -225,7 +230,7 @@ export const createItem = async (req, res) => {
 
 export const getItems = async (req, res) => {
   try {
-    console.log(req.body);
+    // console.log(req.body);
     if (req.body?.Id === "all") {
       const items = await Item.find();
       return res.json(items);
