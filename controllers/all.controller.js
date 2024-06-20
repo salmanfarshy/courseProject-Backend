@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { Collection } from "../models/collection.model.js";
 import { Item } from "../models/item.model.js";
 import cloudinary from "cloudinary";
+import axios from "axios";
 
 export const register = async (req, res) => {
   try {
@@ -398,6 +399,129 @@ export const createComment = async (req, res) => {
 
     return res.send(item.comments);
   } catch (err) {
+    return res.send(false);
+  }
+};
+
+export const createJiraIssue = async (req, res) => {
+  try {
+    console.log(req.body);
+    const { email, name, priority, status, summary, link } = req.body;
+
+    const jiraHeaders = {
+      Authorization: `Basic ${btoa(process.env.jira_auth)}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+
+    const response = await axios.get(
+      `${process.env.jira_url}/user/search?query=${email}`,
+      {
+        headers: jiraHeaders,
+      }
+    );
+
+    let user = response.data.length > 0 ? response.data[0] : null;
+    console.log(user);
+
+    if (!user) {
+      // user = await createUser(email, displayName);
+      const response = await axios.post(
+        `${process.env.jira_url}/user`,
+        {
+          emailAddress: email,
+          displayName: name,
+          notification: "true",
+          products: [
+            "jira-core",
+            "jira-servicedesk",
+            "jira-product-discovery",
+            "jira-software",
+          ],
+        },
+        {
+          headers: jiraHeaders,
+        }
+      );
+      user = response.data;
+      console.log(response);
+    }
+
+    const newIssue = {
+      fields: {
+        project: { key: process.env.jira_key },
+        summary: summary,
+        description: "Issue created from collection app(salman).",
+        issuetype: { name: "Task", subtask: false },
+        priority: { name: priority },
+        reporter: { id: user?.accountId },
+        customfield_10043: link,
+      },
+    };
+
+    const issue = await axios.post(`${process.env.jira_url}/issue`, newIssue, {
+      headers: jiraHeaders,
+    });
+    const issueKey = issue.data.key;
+
+    const transitionEndpoint = `${process.env.jira_url}/issue/${issueKey}/transitions`;
+    const transitionsResponse = await axios.get(transitionEndpoint, {
+      headers: jiraHeaders,
+    });
+
+    const transition = transitionsResponse.data.transitions.find(
+      (t) => t.to.name === status
+    );
+
+    if (transition) {
+      await axios.post(
+        transitionEndpoint,
+        { transition: { id: transition.id } },
+        { headers: jiraHeaders }
+      );
+    }
+
+    console.log(issue.data);
+    return res.send("success");
+  } catch (err) {
+    // console.log(err.response);
+    return res.send("unsuccess");
+  }
+};
+
+export const getJiraTickets = async (req, res) => {
+  try {
+    // console.log(req.body);
+    const { startAt, email, admin } = req.body;
+    const jiraHeaders = {
+      Authorization: `Basic ${btoa(process.env.jira_auth)}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+
+    const jqlQuery = admin
+      ? `project = "${process.env.jira_key}"`
+      : `project = "${process.env.jira_key}" AND reporter="${email}"`;
+
+    const response = await axios.get(`${process.env.jira_url}/search`, {
+      headers: jiraHeaders,
+      params: {
+        jql: jqlQuery,
+        fields: "key,summary,status",
+        startAt: startAt === 0 ? startAt : startAt * 9 + 1,
+        maxResults: 9,
+      },
+    });
+    const issues = response.data.issues.map((issue) => ({
+      status: issue.fields.status.name,
+      summary: issue.fields.summary,
+      link: `https://salmanfarshi447.atlassian.net/browse/${issue.key}`,
+    }));
+    // console.log(issues);
+
+    return res.json({ issues, total: response.data.total });
+  } catch (err) {
+    // console.log(err.response);
     return res.send(false);
   }
 };

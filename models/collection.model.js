@@ -1,4 +1,5 @@
-import { Schema, model } from "mongoose";
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const collectionSchema = new Schema({
   name: {
@@ -21,4 +22,4 @@ const collectionSchema = new Schema({
   owner: { type: Schema.Types.ObjectId, ref: "User", required: true },
 });
 
-export const Collection = model("Collection", collectionSchema);
+export const Collection = mongoose.model("Collection", collectionSchema);

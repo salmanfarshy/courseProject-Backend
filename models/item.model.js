@@ -1,4 +1,5 @@
-import { Schema, model } from "mongoose";
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const itemSchema = new Schema({
   id: {
@@ -33,4 +34,4 @@ const itemSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const Item = model("Item", itemSchema);
+export const Item = mongoose.model("Item", itemSchema);

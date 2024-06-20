@@ -26,6 +26,8 @@ import {
   createComment,
   latestItems,
   largestCollections,
+  createJiraIssue,
+  getJiraTickets,
 } from "./controllers/all.controller.js";
 
 dotenv.config();
@@ -37,6 +39,7 @@ app.use(
     credentials: true,
   })
 );
+// app.use(cors());
 
 app.use(express.json());
 app.use(cookieParser());
@@ -91,6 +94,8 @@ app.post("/like", updateLike);
 app.post("/newComment", createComment);
 app.get("/latestitems", latestItems);
 app.get("/LargestCollections", largestCollections);
+app.post("/create/jiraTicket", createJiraIssue);
+app.post("/tickets", getJiraTickets);
 
 app.listen(process.env.PORT || 4000, () => {
   console.log("Server is running!");
